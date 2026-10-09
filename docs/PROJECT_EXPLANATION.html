@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UNSW-NB15 Intrusion Detection Project - Detailed Guide</title>
+<style>
+@page { size: A4; margin: 17mm 16mm 18mm; }
+* { box-sizing: border-box; }
+body { font-family: "Segoe UI", Arial, sans-serif; color: #1d2939; font-size: 10pt; line-height: 1.48; margin: 0; }
+h1, h2, h3 { color: #153b5b; line-height: 1.2; }
+h1 { font-size: 28pt; margin: 0 0 14pt; }
+h2 { font-size: 19pt; border-bottom: 2px solid #2a6f97; padding-bottom: 5pt; margin: 0 0 12pt; }
+h3 { font-size: 12pt; margin: 13pt 0 5pt; }
+p { margin: 5pt 0 8pt; }
+ul, ol { margin: 4pt 0 9pt; padding-left: 20pt; }
+li { margin: 2pt 0; }
+code { font-family: Consolas, "Courier New", monospace; font-size: 8.5pt; color: #164e63; }
+pre { font-family: Consolas, "Courier New", monospace; font-size: 8pt; white-space: pre-wrap; background: #f1f5f9; border-left: 3px solid #2a6f97; padding: 8pt 10pt; margin: 7pt 0 10pt; }
+table { border-collapse: collapse; width: 100%; font-size: 8.8pt; margin: 7pt 0 11pt; }
+th { background: #153b5b; color: white; text-align: left; }
+th, td { border: 1px solid #cbd5e1; padding: 5pt 6pt; vertical-align: top; }
+tr:nth-child(even) td { background: #f8fafc; }
+img { display: block; max-width: 100%; max-height: 220mm; object-fit: contain; margin: 8pt auto; }
+.cover { min-height: 245mm; display: flex; flex-direction: column; justify-content: center; }
+.eyebrow { color: #2a6f97; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.subtitle { font-size: 15pt; color: #475467; }
+.callout { border-left: 4px solid #2a6f97; background: #eff6fb; padding: 8pt 11pt; margin: 9pt 0; }
+.warn { border-left-color: #b7791f; background: #fffbeb; }
+.small { font-size: 8.5pt; color: #475467; }
+.page { break-before: page; page-break-before: always; }
+.keep { break-inside: avoid; page-break-inside: avoid; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12pt; }
+.pill { color: white; background: #2a6f97; border-radius: 10px; padding: 2pt 7pt; font-size: 8pt; }
+.center { text-align: center; }
+@media screen { body { max-width: 850px; margin: 24px auto; padding: 30px 46px; box-shadow: 0 2px 18px #cbd5e1; } .page { margin-top: 50px; } }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <p class="eyebrow">Detailed Project Guide</p>
+  <h1>Intelligent Network Intrusion Detection and Attack Classification</h1>
+  <p class="subtitle">A practical walkthrough of the UNSW-NB15 machine-learning project</p>
+  <div class="callout">
+    <strong>Project in one sentence.</strong> The application learns from labeled network-flow statistics to distinguish normal traffic from attacks, classify attack families, evaluate five models, save complete prediction pipelines, and expose them through a command-line interface and Streamlit web app.
+  </div>
+  <p><strong>Dataset:</strong> UNSW-NB15 partitioned training and testing CSVs</p>
+  <p><strong>Implemented tasks:</strong> binary detection and ten-class classification</p>
+  <p><strong>Models:</strong> Logistic Regression, Decision Tree, Random Forest, XGBoost, and MLP</p>
+  <p><strong>Document basis:</strong> project source, generated artifacts, and real-data run results</p>
+  <p class="small">This is an educational benchmark project, not a production-ready security control.</p>
+</section>
+
+<section class="page">
+  <h2>1. What the project does</h2>
+  <p>A network intrusion detection system (IDS) monitors traffic and identifies activity that may be malicious. This project operates on <em>flow records</em>: compact summaries of network conversations, rather than raw packet payloads. A record contains measurements such as duration, byte counts, protocol, TCP state, packet rates, and connection counts.</p>
+  <p>The project learns the relationship between those features and the dataset's labels. It has two related prediction tasks:</p>
+  <table>
+    <tr><th>Task</th><th>Target</th><th>Classes predicted</th><th>Question answered</th></tr>
+    <tr><td>Binary</td><td><code>label</code></td><td>Normal, Attack</td><td>Is this flow benign or malicious?</td></tr>
+    <tr><td>Multiclass</td><td><code>attack_cat</code></td><td>Normal plus nine attack families</td><td>Which known category best describes this flow?</td></tr>
+  </table>
+  <p>The same raw feature columns are used in each task; only the target label changes. The output is a predicted class and, when supported by the model, class probabilities that the app displays as confidence.</p>
+  <h3>End-to-end flow</h3>
+  <pre>Partitioned CSVs
+    -> clean column names, category text, and infinite values
+    -> separate target labels from input features
+    -> fit preprocessing on training data
+    -> train five candidate classifiers
+    -> evaluate on held-out test data
+    -> save models, metrics, reports, and plots
+    -> predict from CLI or Streamlit</pre>
+  <h3>Why this is useful</h3>
+  <p>Accuracy alone can hide poor performance on uncommon attacks. The project therefore reports macro-F1, per-class F1, attack detection rate, and false-alarm rate alongside accuracy and ROC-AUC. An analyst can compare models based on the cost of missed attacks versus unnecessary alerts.</p>
+</section>
+
+<section class="page">
+  <h2>2. Dataset and labels</h2>
+  <p>UNSW-NB15 was created by UNSW Canberra using a cyber range to combine normal activity with synthetic attack behaviours. The project uses the supplied partitioned data, which contains the fields needed by the code, including <code>label</code> and <code>attack_cat</code>.</p>
+  <table>
+    <tr><th>Split</th><th>Rows used</th><th>Purpose</th></tr>
+    <tr><td>Training</td><td>175,341</td><td>Fit preprocessing and model parameters</td></tr>
+    <tr><td>Testing</td><td>82,332</td><td>Final held-out evaluation and example predictions</td></tr>
+  </table>
+  <p>The project data folder should contain <code>data/UNSW_NB15_training-set.csv</code> and <code>data/UNSW_NB15_testing-set.csv</code>. The training CSV has 45 columns in the current copy. After excluding ID and labels, 42 feature columns are passed to the models.</p>
+  <h3>Ten multiclass labels</h3>
+  <table>
+    <tr><th>Label</th><th>General description</th><th>Training rows</th></tr>
+    <tr><td>Normal</td><td>Benign traffic</td><td>56,000</td></tr>
+    <tr><td>Generic</td><td>Generic attack family</td><td>40,000</td></tr>
+    <tr><td>Exploits</td><td>Attempts to use software vulnerabilities</td><td>33,393</td></tr>
+    <tr><td>Fuzzers</td><td>Probe services with malformed or random inputs</td><td>18,184</td></tr>
+    <tr><td>DoS</td><td>Denial-of-service activity</td><td>12,264</td></tr>
+    <tr><td>Reconnaissance</td><td>Scanning and information gathering</td><td>10,491</td></tr>
+    <tr><td>Analysis</td><td>Analysis and probing activity</td><td>2,000</td></tr>
+    <tr><td>Backdoor</td><td>Covert access attempts</td><td>1,746</td></tr>
+    <tr><td>Shellcode</td><td>Small payloads associated with code execution</td><td>1,133</td></tr>
+    <tr><td>Worms</td><td>Self-replicating malware activity</td><td>130</td></tr>
+  </table>
+  <div class="callout warn"><strong>Class imbalance matters.</strong> Generic has 40,000 training examples, while Worms has 130. A classifier can score well overall by recognizing common classes and still miss rare attacks. Macro-F1 and the per-class report help reveal this.</div>
+  <img src="../reports/figures/eda/class_distribution.png" alt="UNSW-NB15 training class distribution">
+  <p class="small">The class counts above come from the actual training run. Values describe this partition and should not be treated as the distribution of live network traffic.</p>
+</section>
+
+<section class="page">
+  <h2>3. Cleaning and preprocessing</h2>
+  <h3>Cleaning</h3>
+  <p><code>src/data_loader.py</code> reads a CSV and applies consistent cleaning without dropping rows: column names are lower-cased and trimmed, category text is trimmed and normalised to lower case, attack category text is trimmed, and positive/negative infinity is replaced with missing values. In the current real-data training file, the EDA summary reports zero missing and zero infinite cells before imputation.</p>
+  <p>For a training run, <code>id</code>, <code>label</code>, and <code>attack_cat</code> are excluded from the feature matrix. The selected task determines which target is returned. The optional <code>--dedupe</code> flag removes duplicate training rows (excluding ID from comparison); it does not deduplicate test records. The reported runs did not enable it, and EDA found 67,601 duplicate training records when ignoring ID.</p>
+  <h3>Feature transformation</h3>
+  <table>
+    <tr><th>Feature type</th><th>Processing</th><th>Purpose</th></tr>
+    <tr><td>Numeric</td><td>Median imputation</td><td>Fill missing numeric measurements robustly</td></tr>
+    <tr><td>Numeric</td><td>Signed log transform: sign(x) * log(1 + abs(x))</td><td>Compress large ranges while retaining negative values</td></tr>
+    <tr><td>Numeric</td><td>StandardScaler</td><td>Put numeric measurements on comparable scales</td></tr>
+    <tr><td><code>proto</code>, <code>service</code>, <code>state</code></td><td>One-hot encoding</td><td>Represent categories numerically; unknown/rare values are handled</td></tr>
+  </table>
+  <p>All transforms are combined with the classifier in a scikit-learn pipeline. In a normal fit, preprocessing is learned using training rows and then applied to test rows. This prevents test measurements from setting imputation, scaling, or category-encoding parameters.</p>
+  <h3>Optional correlated-feature filtering</h3>
+  <p><code>--drop-correlated</code> identifies numeric columns with absolute pairwise correlation greater than 0.95 in the training data, then removes the selected columns from both splits. This experiment is optional and was not part of the completed baseline runs.</p>
+  <h3>Why no payload parsing?</h3>
+  <p>The inputs are engineered flow statistics. The project does not ingest packet captures, inspect packet contents, reconstruct sessions, or observe behaviour over time. Its prediction scope is limited to information represented by each supplied row.</p>
+</section>
+
+<section class="page">
+  <h2>4. Models and training strategy</h2>
+  <table>
+    <tr><th>Model</th><th>Role and configuration</th></tr>
+    <tr><td>Logistic Regression</td><td>Linear baseline; class-balanced; up to 300 iterations.</td></tr>
+    <tr><td>Decision Tree</td><td>Single interpretable tree; class-balanced.</td></tr>
+    <tr><td>Random Forest</td><td>Ensemble of 300 trees by default; parallel fitting and balanced class weights.</td></tr>
+    <tr><td>XGBoost</td><td>Gradient-boosted trees; 300 estimators by default; balanced sample weights are supplied by the training code.</td></tr>
+    <tr><td>MLP</td><td>Neural network with hidden layers of 128 and 64 units, early stopping, and a 100-iteration cap.</td></tr>
+  </table>
+  <h3>Imbalance options</h3>
+  <p>Tree models and Logistic Regression use balanced class weights where supported. XGBoost receives balanced per-row sample weights. The optional SMOTE run transforms training features and raises classes below 10,000 training examples toward that target using nearest-neighbour interpolation. The test set remains unchanged. SMOTE is a comparison, not a guaranteed improvement.</p>
+  <h3>Hyperparameter tuning</h3>
+  <p>The code provides optional randomized search over model-specific parameter grids. It uses macro-F1 scoring and three-fold cross-validation on training data, and can subsample up to 40,000 rows for tuning. The final model is then fit on the training data. This tuning experiment was not run in the reported results.</p>
+  <h3>Reproducibility</h3>
+  <p>The project sets a shared random seed of 42 for estimators and sampling. Results can still vary with library versions, hardware, parallel execution, or changes to input data and parameters. Run configuration and measured outputs are saved alongside results where available.</p>
+</section>
+
+<section class="page">
+  <h2>5. How model quality is measured</h2>
+  <table>
+    <tr><th>Metric</th><th>Meaning</th><th>Interpretation</th></tr>
+    <tr><td>Accuracy</td><td>Correct predictions divided by all predictions</td><td>Overall correctness; can be dominated by common classes.</td></tr>
+    <tr><td>Precision</td><td>Correct predicted class divided by predictions of that class</td><td>How trustworthy alerts or category predictions are.</td></tr>
+    <tr><td>Recall</td><td>Correct predicted class divided by all true examples of that class</td><td>How much of a class the model finds.</td></tr>
+    <tr><td>Macro-F1</td><td>Unweighted mean of F1 over classes</td><td>Gives rare and common classes equal importance.</td></tr>
+    <tr><td>Weighted-F1</td><td>Class F1 averaged by true class support</td><td>Reflects observed class frequency.</td></tr>
+    <tr><td>Attack detection rate</td><td>True attacks predicted as any attack / all true attacks</td><td>Overall sensitivity to attacks, regardless of attack family.</td></tr>
+    <tr><td>False-alarm rate</td><td>Normal flows predicted as attack / all normal flows</td><td>Share of benign records incorrectly flagged.</td></tr>
+    <tr><td>ROC-AUC</td><td>Ranking quality across decision thresholds</td><td>Binary AUC or macro one-vs-rest AUC for multiclass.</td></tr>
+  </table>
+  <p>In multiclass work, attack detection rate and false-alarm rate are calculated after grouping every non-Normal class as “attack.” They are useful operational summaries, but do not replace attack-family metrics. The detailed classification reports and per-class F1 CSVs should be examined before selecting a model.</p>
+  <h3>Confusion matrix</h3>
+  <p>The project plots row-normalised confusion matrices. A row corresponds to a true class; its values show the fraction assigned to each predicted class. A strong diagonal indicates correct classification. Off-diagonal cells show which attack families are confused.</p>
+  <h3>Feature importance</h3>
+  <p>Decision Tree, Random Forest, and XGBoost expose tree-based feature importance. The project writes CSVs and top-feature plots. Importance indicates model use, not causation, and correlated inputs can share or distort importance.</p>
+</section>
+
+<section class="page">
+  <h2>6. Results from the completed real-data run</h2>
+  <p>Rows below are measured on the supplied held-out test partition. They are specific to this run and dataset; they are not guarantees for other networks.</p>
+  <h3>Binary detection</h3>
+  <table>
+    <tr><th>Model</th><th>Accuracy</th><th>Macro-F1</th><th>Attack detection</th><th>False alarm</th><th>ROC-AUC</th></tr>
+    <tr><td>Logistic Regression</td><td>0.8681</td><td>0.8642</td><td>0.9407</td><td>0.2209</td><td>0.9670</td></tr>
+    <tr><td>Decision Tree</td><td>0.8620</td><td>0.8563</td><td>0.9636</td><td>0.2625</td><td>0.8523</td></tr>
+    <tr><td>Random Forest</td><td>0.8926</td><td>0.8889</td><td><strong>0.9766</strong></td><td>0.2103</td><td>0.9814</td></tr>
+    <tr><td>XGBoost</td><td><strong>0.8964</strong></td><td><strong>0.8934</strong></td><td>0.9661</td><td><strong>0.1890</strong></td><td><strong>0.9827</strong></td></tr>
+    <tr><td>MLP</td><td>0.8681</td><td>0.8627</td><td>0.9686</td><td>0.2551</td><td>0.9767</td></tr>
+  </table>
+  <img src="../reports/figures/binary_real/model_comparison.png" alt="Binary model comparison chart">
+  <img src="../reports/figures/binary_real/roc_curves.png" alt="Binary receiver operating characteristic curves">
+  <h3>Multiclass and SMOTE summary</h3>
+  <table>
+    <tr><th>Experiment</th><th>Highest accuracy</th><th>Highest macro-F1</th><th>Observation</th></tr>
+    <tr><td>Multiclass baseline</td><td>MLP: 0.7674</td><td>XGBoost: 0.5219</td><td>Accuracy and balanced class quality rank models differently.</td></tr>
+    <tr><td>Multiclass + SMOTE</td><td>MLP: 0.7221</td><td>XGBoost: 0.5106</td><td>Best macro-F1 decreased from baseline.</td></tr>
+  </table>
+  <p>For baseline multiclass XGBoost, Generic F1 was about 0.985 and Exploits F1 about 0.700, while Analysis F1 was about 0.063 and Backdoor F1 about 0.111. That unevenness is why the headline accuracy alone is inadequate. XGBoost binary was the strongest balanced choice across the listed aggregate metrics, while Random Forest detected the largest fraction of attacks. A deployment would need a threshold and error-cost decision based on its requirements.</p>
+  <img src="../reports/figures/multiclass_real/cm_XGBoost.png" alt="Normalised multiclass XGBoost confusion matrix">
+  <img src="../reports/figures/multiclass_real/per_class_f1.png" alt="Multiclass per-class F1 comparison">
+</section>
+
+<section class="page">
+  <h2>7. What SMOTE changed</h2>
+  <p>SMOTE increased the number of examples used to train minority classes by synthesising feature vectors from nearby examples. It does not add newly observed attacks; it changes the training distribution to give rare classes more influence.</p>
+  <table>
+    <tr><th>XGBoost class</th><th>Baseline F1</th><th>With SMOTE F1</th><th>Change</th></tr>
+    <tr><td>DoS</td><td>0.253</td><td>0.387</td><td>Improved in this run</td></tr>
+    <tr><td>Shellcode</td><td>0.409</td><td>0.370</td><td>Decreased</td></tr>
+    <tr><td>Worms</td><td>0.697</td><td>0.552</td><td>Decreased; few real examples available</td></tr>
+    <tr><td>Overall macro-F1</td><td>0.5219</td><td>0.5106</td><td>Decreased</td></tr>
+  </table>
+  <p>These outcomes show that resampling may help one class and hurt another. The right choice depends on per-class recall/precision and the impact of false negatives and false positives. Synthetic samples can only interpolate patterns present in the minority training examples; they cannot represent entirely new attack behaviour.</p>
+  <h3>Important warning: benchmark versus operations</h3>
+  <p>The test split is a fixed benchmark partition. A good score here does not show that the model will generalise to traffic collected at another time, network, device population, or attack campaign. A real deployment needs external validation, monitoring for drift, analyst review, and a safe alerting policy.</p>
+</section>
+
+<section class="page">
+  <h2>8. Run the project and use its outputs</h2>
+  <h3>Install and test</h3>
+  <pre>python -m venv .venv
+# Windows PowerShell:
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pytest -q</pre>
+  <h3>Run core experiments from the repository root</h3>
+  <pre>python -m src.eda
+python -m src.train --task binary --tag real
+python -m src.train --task multiclass --tag real
+python -m src.train --task multiclass --smote --tag real_smote</pre>
+  <p>The completed artifacts use the suffix <code>real</code> (or <code>real_smote</code>) so they do not overwrite untagged runs. The standard all-steps script is <code>run_all.sh</code> and expects a Bash environment.</p>
+  <h3>Batch predictions with the saved multiclass pipeline</h3>
+  <pre>python -m src.predict ^
+  --model models/multiclass_real/best_model.joblib ^
+  --input data/UNSW_NB15_testing-set.csv ^
+  --output predictions.csv</pre>
+  <p>The Windows line-continuation caret above is for Command Prompt. In PowerShell, put the command on one line or use PowerShell's backtick continuation. The prediction command writes the input rows plus predicted class, attack flag, and confidence columns (when the classifier supports probabilities). The saved pipeline handles feature alignment and preprocessing.</p>
+  <h3>Launch the web application</h3>
+  <pre>streamlit run app/streamlit_app.py</pre>
+  <p>In the sidebar select a task/run folder and model artifact. Upload a CSV with the expected UNSW-NB15 feature columns, or use the test-set sample button. The page reports predicted class counts, attack share, mean confidence, shows the most confident flagged flows, permits single-row probability inspection, and provides a predictions CSV download. When the uploaded CSV includes target labels, the app also shows accuracy and macro-F1 for those rows.</p>
+</section>
+
+<section class="page">
+  <h2>9. Project structure and saved artifacts</h2>
+  <table>
+    <tr><th>Path</th><th>Purpose</th></tr>
+    <tr><td><code>src/config.py</code></td><td>Dataset paths, label names, output locations, and random seed.</td></tr>
+    <tr><td><code>src/data_loader.py</code></td><td>CSV loading, normalisation, cleaning, and task target separation.</td></tr>
+    <tr><td><code>src/preprocessing.py</code></td><td>Numeric transformations, categorical encoding, and optional correlation filter.</td></tr>
+    <tr><td><code>src/models.py</code></td><td>Five estimators and optional hyperparameter grids.</td></tr>
+    <tr><td><code>src/train.py</code></td><td>Training, optional tuning/SMOTE, evaluation, plotting, and artifact save.</td></tr>
+    <tr><td><code>src/evaluate.py</code></td><td>Metrics, classification report, confusion matrix and comparison charts.</td></tr>
+    <tr><td><code>src/predict.py</code></td><td>Load saved artifacts and predict from a CSV or dataframe.</td></tr>
+    <tr><td><code>src/eda.py</code></td><td>Dataset overview, class distribution, feature plots, and summary tables.</td></tr>
+    <tr><td><code>app/streamlit_app.py</code></td><td>Interactive browser interface for selecting models and reviewing predictions.</td></tr>
+    <tr><td><code>tests/test_pipeline.py</code></td><td>Fast synthetic-data tests for cleaning, preprocessing, training, and prediction.</td></tr>
+  </table>
+  <h3>Where to find run products</h3>
+  <ul>
+    <li><code>models/binary_real/</code>, <code>models/multiclass_real/</code>, <code>models/multiclass_real_smote/</code>: each model and <code>best_model.joblib</code>.</li>
+    <li><code>reports/results/&lt;run&gt;/metrics_summary.csv</code>: aggregate metrics, train time, and inference time.</li>
+    <li><code>reports/results/&lt;run&gt;/per_class_f1.csv</code> and <code>report_*.txt</code>: per-class outcomes.</li>
+    <li><code>reports/figures/&lt;run&gt;/</code>: confusion matrices, model comparison, ROC and feature-importance plots.</li>
+    <li><code>reports/results/eda/</code> and <code>reports/figures/eda/</code>: exploratory-analysis tables and figures.</li>
+  </ul>
+  <div class="callout warn"><strong>Large model file.</strong> The SMOTE Random Forest artifact is approximately 1.5 GB because of the fitted forest and oversampled training. Keep enough disk space before copying or backing up the complete model directory.</div>
+</section>
+
+<section class="page">
+  <h2>10. Limitations and next steps</h2>
+  <h3>Known limitations</h3>
+  <ul>
+    <li>The dataset is lab-generated and dates from 2015; modern operational traffic can differ.</li>
+    <li>Flow-level statistics omit packet payloads and longer-term host/session context.</li>
+    <li>Rare attack categories have few examples and unstable estimates; Worms has 130 training records in this split.</li>
+    <li>The model is closed-set: it selects among known classes and is not an unknown-attack detector.</li>
+    <li>Logistic Regression reached its configured 300-iteration limit in multiclass runs. Its warning and results are documented; tuning iterations/solver is a reasonable follow-up.</li>
+    <li>The test partition is used for reporting, not model selection. Further model choices should be based on a validation split or training-only cross-validation, not repeated test-set tuning.</li>
+  </ul>
+  <h3>Recommended follow-up</h3>
+  <ol>
+    <li>Run the optional Random Forest/XGBoost tuning experiment and reduced-feature experiment, each under a distinct tag.</li>
+    <li>Review class-level confusion matrices and choose operating thresholds with a stated cost of missed attacks versus false alarms.</li>
+    <li>Validate on a separate, more recent dataset or locally collected data before any operational use.</li>
+    <li>Consider probability calibration, drift monitoring, analyst feedback, and explicit rejection/unknown-class handling.</li>
+    <li>Check memory/storage requirements before loading the SMOTE Random Forest artifact.</li>
+  </ol>
+  <h3>Completion and validation status</h3>
+  <p>The core end-to-end workflow has been run on the real partitioned dataset: EDA, binary training, multiclass training, and multiclass with SMOTE. The automated suite passes four tests. The saved multiclass model produced predictions and ten-class probability vectors for the entire 82,332-row test CSV; the Streamlit health endpoint also responded during verification. Hyperparameter tuning and correlated-feature removal remain optional experiments, not requirements for the completed baseline pipeline.</p>
+  <p class="small">Dataset source: UNSW Canberra, UNSW-NB15. Cite N. Moustafa and J. Slay, “UNSW-NB15: a comprehensive data set for network intrusion detection systems,” MilCIS, 2015, when using the dataset.</p>
+</section>
+
+</body>
+</html>
