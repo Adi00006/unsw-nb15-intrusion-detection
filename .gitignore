@@ -9,5 +9,16 @@ __pycache__/
 data/*.csv
 data/synthetic/
 models/
+!models/
+models/*
+!models/binary_real/
+models/binary_real/*
+!models/binary_real/best_model.joblib
+!models/multiclass_real/
+models/multiclass_real/*
+!models/multiclass_real/best_model.joblib
+!models/multiclass_real_smote/
+models/multiclass_real_smote/*
+!models/multiclass_real_smote/best_model.joblib
 reports/
 predictions/

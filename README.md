@@ -82,6 +82,23 @@ Run all commands from the project root.
 Useful flags: `--models lr dt rf xgb mlp` (pick a subset), `--n-estimators 100` (faster),
 `--dedupe` (remove duplicate training rows), `--tag NAME` (keep runs side by side).
 
+### Deploy the Streamlit app to Community Cloud
+
+The repository includes the three trained `best_model.joblib` files required by the
+app. Dataset CSVs and other generated training artifacts stay out of GitHub. After
+deployment, upload a CSV with UNSW-NB15 flow-feature columns to make predictions;
+the dataset-sampling demo button is available only when a local test CSV is present.
+
+1. Open [Streamlit Community Cloud](https://share.streamlit.io/) and sign in with the
+   GitHub account that owns this repository.
+2. Choose **Create app**, then select `Adi00006/unsw-nb15-intrusion-detection`, branch
+   `main`, and main file path `app/streamlit_app.py`.
+3. In **Advanced settings**, select Python **3.14** to match the saved model runtime.
+4. Deploy the app. The public app URL will be assigned by Streamlit Community Cloud.
+
+The app runs predictions on uploaded CSVs. Do not upload confidential or sensitive
+network-flow data to a public demo.
+
 ## 5. Outputs
 
 | Location | Content |
